@@ -8,7 +8,8 @@ import IssuerDataFetcher from './lib/IssuerDataFetcher.js';
 import TokenRequestCreator from './lib/TokenRequestCreator.js';
 import TokenRedemption from './lib/TokenRedemption.js';
 
-// --- CONFIGURATION MAPPING ---
+// --- 1. CONFIGURATION MAPPING ---
+// Map the simple keys from index.html to the real URLs in .env
 const ISSUER_MAP = {
     'cf_demo': process.env.ISSUER_CF_DEMO,
     'cf_sat':  process.env.ISSUER_CF_SAT,
@@ -26,21 +27,15 @@ if (!DEFAULT_ISSUER) {
     process.exit(1);
 }
 
-// 1. Assign the server instance to a variable named 'server'
-const server = http.createServer(async function (req, res) {
+http.createServer(async function (req, res) {
     try {
+        // --- 2. URL PARSING ---
         const currentUrl = new URL(req.url, `http://${req.headers.host}`);
-        
-        // DEBUG LOGGING
-        console.log('\n------------------------------------------------');
-        console.log(`[DEBUG] Incoming Request: ${req.method}`);
-        console.log(`[DEBUG] Full URL: ${currentUrl.href}`);
-        console.log('------------------------------------------------');
-
         const issuerKey = currentUrl.searchParams.get('issuer');
 
-        // Logic: If root "/" with NO key and NO auth header, show selection screen.
+        // Logic: If user visits root "/" with NO key and NO auth header, show selection screen.
         if (currentUrl.pathname === '/' && !issuerKey && !req.headers['authorization']) {
+            console.log('Serving Selection Dashboard (index.html)');
             try {
                 let html = fs.readFileSync("html/index.html", "utf8");
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -51,52 +46,76 @@ const server = http.createServer(async function (req, res) {
             }
         }
 
+        // --- 3. DETERMINE ISSUER URL ---
+        // Lookup the key in our map. If not found, fall back to default.
         let targetIssuerUrl = ISSUER_MAP[issuerKey] || DEFAULT_ISSUER;
+        
         console.log(`> Key: "${issuerKey}" | Using URL: ${targetIssuerUrl}`);
 
+        // --- 4. FETCH ISSUER DATA ---
+        // We fetch fresh data for every request to ensure we match the selected issuer
         const issuerInfo = await issuerDataFetcher.fetchIssuerData(targetIssuerUrl);
 
-        // --- VALIDATION LOGIC ---
+
+        // --- 5. VALIDATION LOGIC (CHECK FOR TOKEN) ---
         let validationResult = { isValid: false };
         if ('authorization' in req.headers) {
             validationResult = tokenRedemption.validateAuthToken(issuerInfo, req.headers['authorization']);
         }
 
         if (validationResult.isValid) {
-            // CASE 200: SUCCESS
+            // ==========================================
+            // CASE 200: SUCCESS - Token Valid
+            // ==========================================
             console.log('200 - Authenticated Request');
+
             let html = fs.readFileSync("html/success200.html", "utf8");
+            
+            // Inject Display Data
             html = html.replace('AUTH_HEADER', req.headers['authorization']);
             html = html.replace('TOKEN_INFO_JSON', JSON.stringify(validationResult.tokenData, null, 4));
+
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(html);
 
         } else {
-            // CASE 401: CHALLENGE
+            // ==========================================
+            // CASE 401: CHALLENGE - Ask for Token
+            // ==========================================
             console.log('401 - Sending Challenge for: ' + issuerInfo.issuer_name);
 
+            // Generate the challenge string
             const tokenRequest = tokenRequestCreator.createTokenRequest(
                 issuerInfo.issuer_name, 
                 process.env.INCLUDE_RANDOM_NONCE || true, 
                 process.env.ORIGIN_SCOPE
             );
             
+            // Register this request internally so we can verify the response later
             tokenRedemption.registerTokenRequestForRedemption(Buffer.from(tokenRequest, 'base64'));
             
-            const challengeString = `PrivateToken challenge="${tokenRequest}", token-key="${issuerInfo.issuer_public_key_base64}", max-age=20`;
+            // Construct the WWW-Authenticate Header
+            // We MUST include 'token-issuer-directory' so the client knows which URL to hit
+            //const challengeString = `PrivateToken challenge=${tokenRequest}, token-key=${issuerInfo.issuer_public_key_base64}, token-issuer-directory=${targetIssuerUrl}`;
+            const challengeString = `PrivateToken challenge=${tokenRequest}, token-key=${issuerInfo.issuer_public_key_base64}`;
 
+            // Prepare the 401 HTML Page
             let html = fs.readFileSync("html/challenge401.html", "utf8");
+
+            // Fill in the placeholders
             html = html.replace('CHALLENGE_STRING_VAL', challengeString);
             html = html.replace('ISSUER_NAME_VAL', issuerInfo.issuer_name);
             html = html.replace('ORIGIN_SCOPE_VAL', process.env.ORIGIN_SCOPE || "N/A");
             html = html.replace('TOKEN_KEY_VAL', issuerInfo.issuer_public_key_base64);
 
+            // Show error if previous attempt failed
             if (validationResult.error) {
                 html = html.replace('ERROR_MSG', `<p style="color:red">Validation Failed: ${validationResult.error}</p>`);
             } else {
                 html = html.replace('ERROR_MSG', '');
             }
 
+            // Send 401
             res.writeHead(401, { 
                 'Content-Type': 'text/html; charset=utf-8',
                 'WWW-Authenticate': challengeString 
@@ -109,18 +128,7 @@ const server = http.createServer(async function (req, res) {
         res.writeHead(500);
         res.end("Internal Server Error");
     }
-});
 
-// 2. Apply the Timeout Settings (Must be done before .listen)
-// Set Keep-Alive timeout to 1 second (1000 ms)
-// server.keepAliveTimeout = 1000;
+}).listen(process.env.NODE_PORT || 8080);
 
-// IMPORTANT: Always set headersTimeout slightly higher than keepAliveTimeout
-// to avoid "socket hang up" errors if the server closes while client sends headers.
-// server.headersTimeout = 1500; 
-
-// 3. Start the server
-server.listen(process.env.NODE_PORT || 8080, () => {
-    console.log(`Server started on port ${process.env.NODE_PORT || 8080}`);
-//    console.log(`Timeouts configured: KeepAlive=1s, Headers=1.5s`);
-});
+console.log(`Server started on port ${process.env.NODE_PORT || 8080}`);

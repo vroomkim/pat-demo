@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select PAT Issuer</title>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; background: #f9f9f9; }
+        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { margin-top: 0; color: #333; }
+        p { color: #666; margin-bottom: 2rem; }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { border-color: #0070f3; background: #f0f7ff; color: #0070f3; }
+        .sub-text { font-weight: normal; font-size: 0.85rem; color: #888; display: block; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>PAT Demo</h1>
+        <p>Select an issuer to begin the Private Access Token challenge.</p>
+
+        <button class="btn" onclick="startChallenge('cf_demo')">
+            Cloudflare Demo
+            <span class="sub-text">Cloudflare Standard public demo issuer</span>
+        </button>
+
+        <button class="btn" onclick="startChallenge('cf_sat')">
+            Cloudflare SAT
+            <span class="sub-text">Cloudflare issuer for SEC</span>
+        </button>
+
+        <button class="btn" onclick="startChallenge('fastly')">
+            Fastly Demo
+            <span class="sub-text">Fastly PAT infrastructure</span>
+        </button>
+    </div>
+
+    <script>
+        function startChallenge(key) {
+            // Generate a random timestamp to prevent caching
+            const randomNonce = Date.now();
+            
+            // Append it to the URL
+            // Result looks like: /?issuer=cf_demo
+            window.location.href = `/?issuer=${key}`;
+        }
+    </script>
+</body>
+</html>

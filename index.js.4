@@ -26,8 +26,7 @@ if (!DEFAULT_ISSUER) {
     process.exit(1);
 }
 
-// 1. Assign the server instance to a variable named 'server'
-const server = http.createServer(async function (req, res) {
+http.createServer(async function (req, res) {
     try {
         const currentUrl = new URL(req.url, `http://${req.headers.host}`);
         
@@ -83,7 +82,8 @@ const server = http.createServer(async function (req, res) {
             
             tokenRedemption.registerTokenRequestForRedemption(Buffer.from(tokenRequest, 'base64'));
             
-            const challengeString = `PrivateToken challenge="${tokenRequest}", token-key="${issuerInfo.issuer_public_key_base64}", max-age=20`;
+            // --- MODIFIED HERE: REMOVED token-issuer-directory ---
+            const challengeString = `PrivateToken challenge=${tokenRequest}, token-key=${issuerInfo.issuer_public_key_base64}`;
 
             let html = fs.readFileSync("html/challenge401.html", "utf8");
             html = html.replace('CHALLENGE_STRING_VAL', challengeString);
@@ -109,18 +109,5 @@ const server = http.createServer(async function (req, res) {
         res.writeHead(500);
         res.end("Internal Server Error");
     }
-});
 
-// 2. Apply the Timeout Settings (Must be done before .listen)
-// Set Keep-Alive timeout to 1 second (1000 ms)
-// server.keepAliveTimeout = 1000;
-
-// IMPORTANT: Always set headersTimeout slightly higher than keepAliveTimeout
-// to avoid "socket hang up" errors if the server closes while client sends headers.
-// server.headersTimeout = 1500; 
-
-// 3. Start the server
-server.listen(process.env.NODE_PORT || 8080, () => {
-    console.log(`Server started on port ${process.env.NODE_PORT || 8080}`);
-//    console.log(`Timeouts configured: KeepAlive=1s, Headers=1.5s`);
-});
+}).listen(process.env.NODE_PORT || 8080);
