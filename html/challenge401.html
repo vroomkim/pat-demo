@@ -1,16 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>401 - Token challenge</title>
+    <title>401 - 토큰 챌린지 (Token Challenge)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style type="text/css">
-        p {
-            font-family: Arial, Helvetica, sans-serif;
-        }
+        body { font-family: 'Apple SD Gothic Neo', Arial, sans-serif; padding: 20px; }
+        h2 { color: #333; }
+        .info-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-top: 20px; word-break: break-all; }
+        .label { font-weight: bold; color: #555; display: block; margin-top: 10px; }
+        code { font-family: monospace; color: #d63384; }
     </style>
 </head>
 <body>
-    <p>Sending token challenge. Only supported on iOS/iPadOS 16 and macOS Ventura.</p>
-    <p>More info: <a href="https://github.com/m-keller/private-access-tokens-demo" target="_new">https://github.com/m-keller/private-access-tokens-demo</a>
+    <h2>🔒 401 Unauthorized - 토큰이 필요합니다 / 토큰이 발급되지 않았습니다</h2>
+    
+    <p>토큰 챌린지를 전송했습니다.</p>
+    <p>이 기능은 PAT 기능이 활성화된 <b>Samsung Internet Browser</b>, <b>iOS/iPadOS 16</b> 및 <b>macOS Ventura</b> 이상에서 지원됩니다.</p>
+    <p>브라우저나 OS의 구현에 따라 매번 토큰이 발급되지 않을 수 있습니다.</p>
+    <p>브라우저를 재시작하거나 혹은 5초 경과후 다시 시도하면 토큰이 정상 발급될 수 있습니다.</p>
+
+    ERROR_MSG
+
+    <div class="info-box">
+        <h3>전송된 챌린지 정보 (Server Challenge Info)</h3>
+        
+        <span class="label">Issuer Name:</span>
+        <code>ISSUER_NAME_VAL</code>
+
+        <span class="label">Origin Scope:</span>
+        <code>ORIGIN_SCOPE_VAL</code>
+
+        <span class="label">Full Challenge Header:</span>
+        <code>CHALLENGE_STRING_VAL</code>
+
+        <span class="label">Token Key (Public):</span>
+        <code style="font-size: 10px;">TOKEN_KEY_VAL</code>
+    </div>
+
 </body>
 </html>
